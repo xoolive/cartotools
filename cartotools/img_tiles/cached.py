@@ -2,6 +2,11 @@ import os
 import requests
 from PIL import Image
 
+from appdirs import user_cache_dir
+
+global_cache_dir = user_cache_dir("cartotools")
+if not os.path.isdir(global_cache_dir):
+    os.makedirs(global_cache_dir)
 
 class Cache(object):
 
@@ -14,11 +19,9 @@ class Cache(object):
                     "Pragma": "no-cache",
                     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.116 Safari/537.36"}
 
-
     def get_image(self, tile):
         tileset_name = '{}'.format(self.__class__.__name__.lower())
-        cache_dir = os.path.expanduser(os.path.join('~/', 'image_tiles',
-                                                    tileset_name))
+        cache_dir = os.path.join(global_cache_dir, tileset_name)
         if not os.path.exists(cache_dir):
             os.makedirs(cache_dir)
         tile_fname = os.path.join(cache_dir,
