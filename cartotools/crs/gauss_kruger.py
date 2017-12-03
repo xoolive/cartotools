@@ -10,14 +10,14 @@ class GaussKruger(TransverseMercator):
     """
     def __init__(self):
         globe = Globe(ellipse='bessel')
-        super(GaussKruger, self).__init__(3, 0, scale_factor=1,
-                                          false_easting=1500000,
+        super(GaussKruger, self).__init__(9, 0, scale_factor=1,
+                                          false_easting=3500000,
                                           false_northing=0,
                                           globe=globe)
 
     @property
     def x_limits(self):
-        return (1600000, 2400000)
+        return (3200000, 5200000)
 
     @property
     def y_limits(self):
