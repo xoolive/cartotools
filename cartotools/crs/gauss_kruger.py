@@ -17,7 +17,7 @@ class GaussKruger(TransverseMercator):
 
     @property
     def x_limits(self):
-        return (3200000, 5200000)
+        return (3200000, 4000000)
 
     @property
     def y_limits(self):
