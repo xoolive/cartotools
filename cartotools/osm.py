@@ -91,13 +91,17 @@ def name_request(query, timeout=30):
 
 def get_airport_json(name):
 
-    airport = name_request(name)
-    south, north, west, east = tuple(float(f)
-                                     for f in airport[0]['boundingbox'])
-    south -= .01
-    west -= .01
-    east += .01
-    north += .01
+    if isinstance(name, str):
+        airport = name_request(name)
+        south, north, west, east = tuple(float(f)
+                                         for f in airport[0]['boundingbox'])
+        south -= .01
+        west -= .01
+        east += .01
+        north += .01
+    else:
+        assert isinstance(name, tuple)
+        west, east, south, north = name
 
     query_str = query.format(north=north, south=south, east=east, west=west,
                              infrastructure='way["aeroway"]',
@@ -105,7 +109,8 @@ def get_airport_json(name):
                              timeout=180, maxsize='')
 
     response_json = overpass_request(data={'data': query_str}, timeout=180)
-    response_json['boundingbox'] = airport[0]['boundingbox']
+    response_json['boundingbox'] = list(str(f)
+                                        for f in (south, north, west, east))
 
     return response_json
 
