@@ -5,8 +5,9 @@
 ### Installation
 
 ```bash
-# in addition to cartopy
-pip install requests pillow oswlib appdirs
+sudo apt-get install libproj-dev
+pip install Cartopy
+pip install requests pillow OSWLib appdirs
 pip install git+https://github.com/xoolive/cartotools
 ```
 
