@@ -23,7 +23,9 @@ class GoogleTiles(Cache, GoogleTiles):
 
 
 class OSM(Cache, OSM):
+    extension = '.png'
     pass
 
 class StamenTerrain(Cache, StamenTerrain):
+    extension = '.png'
     pass

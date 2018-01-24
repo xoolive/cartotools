@@ -9,7 +9,7 @@ http://www.nationaalgeoregister.nl/geonetwork/srv/dut/catalog.search#/map
 """
 
 
-class BRT_Achtergrond(GoogleTiles, Cache):
+class BRT_Achtergrond(Cache, GoogleTiles):
     """
     De achtergrondkaart PDOK is de kaartlaag waarop locatiegebonden
     content wordt afgebeeld. De achtergrondkaart moet ervoor zorgen
@@ -24,6 +24,7 @@ class BRT_Achtergrond(GoogleTiles, Cache):
     """
 
     layer = "brtachtergrondkaart"
+    extension = ".png"
 
     def _image_url(self, tile):
         x, y, z = tile

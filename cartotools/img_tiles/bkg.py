@@ -11,7 +11,7 @@ https://www.geodatenzentrum.de/geodaten/gdz_rahmen.gdz_div?gdz_spr=deu&gdz_akt_z
 """
 
 
-class BKG_Topoplus(GoogleTiles, Cache):
+class BKG_Topoplus(Cache, GoogleTiles):
     """
     """
     def _image_url(self, tile):
