@@ -21,12 +21,24 @@ class Cache(object):
         super(Cache, self).__init__(*args, **kwargs)
         self.params = {}
 
-    def get_image(self, tile):
         tileset_name = '{}'.format(self.__class__.__name__.lower())
-        cache_dir = os.path.join(global_cache_dir, tileset_name)
-        if not os.path.exists(cache_dir):
-            os.makedirs(cache_dir)
-        tile_fname = os.path.join(cache_dir,
+        self.cache_directory = os.path.join(global_cache_dir, tileset_name)
+
+    @property
+    def cache_directory(self):
+        return self.cache_dir
+
+    @cache_directory.setter
+    def cache_directory(self, global_cache_dir):
+        global_cache_dir = os.path.expanduser(global_cache_dir)
+
+        tileset_name = '{}'.format(self.__class__.__name__.lower())
+        self.cache_dir = os.path.join(global_cache_dir, tileset_name)
+        if not os.path.exists(self.cache_dir):
+            os.makedirs(self.cache_dir)
+
+    def get_image(self, tile):
+        tile_fname = os.path.join(self.cache_dir,
                                   '_'.join(str(v) for v in tile) +
                                   self.extension)
 
