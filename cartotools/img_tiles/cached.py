@@ -1,4 +1,6 @@
 import os
+import time
+import hashlib
 import requests
 
 import numpy as np
@@ -16,13 +18,23 @@ if not os.path.isdir(global_cache_dir):
 class Cache(object):
 
     extension = '.jpg'
+    md5_unavailable = None
 
     def __init__(self, *args, **kwargs):
         super(Cache, self).__init__(*args, **kwargs)
         self.params = {}
 
         tileset_name = '{}'.format(self.__class__.__name__.lower())
-        self.cache_directory = os.path.join(global_cache_dir, tileset_name)
+        self.cache_directory = global_cache_dir
+        self.progressbar = None
+
+    def notebook(self):
+        import tqdm
+        self.progressbar = tqdm.tqdm_notebook
+
+    def progressbar(self):
+        import tqdm
+        self.progressbar = tqdm.tqdm
 
     @property
     def cache_directory(self):
@@ -38,13 +50,22 @@ class Cache(object):
             os.makedirs(self.cache_dir)
 
     def get_image(self, tile):
-        tile_fname = os.path.join(self.cache_dir,
-                                  '_'.join(str(v) for v in tile) +
+        x, y, z = tuple(str(v) for v in tile)
+        tile_dir = os.path.join(self.cache_dir, z, y)
+        tile_fname = os.path.join(tile_dir, '{}_{}_{}'.format(x, y, z) +
                                   self.extension)
 
         if not os.path.exists(tile_fname):
             response = requests.get(self._image_url(tile), stream=True,
                                     **self.params)
+
+            if (self.md5_unavailable is not None and
+                    self.md5_unavailable ==
+                    hashlib.md5(response.content).hexdigest()):
+                return None, self.tileextent(tile), 'lower'
+
+            if not os.path.exists(tile_dir):
+                os.makedirs(tile_dir)
 
             with open(tile_fname, "wb") as fh:
                 for chunk in response:
@@ -58,6 +79,8 @@ class Cache(object):
 
     def one_image(self, tile):
         img, extent, origin = self.get_image(tile)
+        if img is None:
+            return None
         img = np.array(img)
         x = np.linspace(extent[0], extent[1], img.shape[1])
         y = np.linspace(extent[2], extent[3], img.shape[0])
@@ -65,6 +88,7 @@ class Cache(object):
 
     def image_for_domain(self, target_domain, target_z):
         tiles = []
+        failed = []
         with futures.ThreadPoolExecutor(max_workers=20) as executor:
             todo = {}
             for tile in self.find_images(target_domain, target_z):
@@ -72,11 +96,39 @@ class Cache(object):
                 todo[future] = tile
 
             done_iter = futures.as_completed(todo)
+            if self.progressbar is not None:
+                done_iter = self.progressbar(done_iter, total=len(todo))
+
             for future in done_iter:
                 try:
                     res = future.result()
                 except IOError:
+                    # Try once more...
+                    tile = todo[future]
+                    # We will try again
+                    failed.append(tile)
                     continue
-                tiles.append(res)
+
+                if res is not None:
+                    tiles.append(res)
+
+        # For tiles which failed in parallel (just in case)
+        if len(failed) > 0:
+            print("Wait for a bit...")
+            time.sleep(3)
+
+            if self.progressbar is not None:
+                failed = self.progressbar(failed)
+
+            for tile in failed:
+                try:
+                    res = self.one_image(tile)
+                except IOError as e:
+                    print(f"IOError for tile: {tile}")
+                    print(e)
+
+                if res is not None:
+                    tiles.append(res)
+
         img, extent, origin = _merge_tiles(tiles)
         return img, extent, origin
