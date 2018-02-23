@@ -52,43 +52,6 @@ def overpass_request(data, timeout=180):
     return response_json
 
 
-def name_request(query, timeout=30):
-
-    params = OrderedDict()
-
-    params['format'] = 'json'
-    params['limit'] = 1
-    params['dedupe'] = 0  # this prevents OSM from de-duping results
-    # so we're guaranteed to get precisely 'limit' number of results
-    params['polygon_geojson'] = 1
-
-    if isinstance(query, str):
-        params['q'] = query
-    elif isinstance(query, dict):
-        # add the query keys in alphabetical order so the URL is the same
-        # string each time, for caching purposes
-        for key in sorted(list(query.keys())):
-            params[key] = query[key]
-
-    url = 'https://nominatim.openstreetmap.org/search'
-    response = requests.get(url, params=params, timeout=timeout)
-    try:
-        response_json = response.json()
-    except Exception:
-        # 429 is 'too many requests' and 504 is 'gateway timeout' from server
-        # overload - handle these errors by recursively calling
-        # nominatim_request until we get a valid response
-        if response.status_code in [429, 504]:
-            time.sleep(1)
-            response_json = name_request(params=params, timeout=timeout)
-
-        else:
-            raise Exception('Server returned no JSON data.\n{} {}\n{}'.format(
-                response, response.reason, response.text))
-
-    return response_json
-
-
 def get_airport_json(name):
 
     if isinstance(name, str):
@@ -113,34 +76,6 @@ def get_airport_json(name):
                                         for f in (south, north, west, east))
 
     return response_json
-
-
-def json_to_shp(json, shapefile):
-    import fiona
-    from shapely.geometry import LineString, mapping
-
-    crs = {'no_defs': True, 'ellps': 'WGS84',
-           'datum': 'WGS84', 'proj': 'longlat'}
-    schema = {'geometry': 'LineString',
-              'properties': {'NAME': 'str', 'TYPE': 'str'}}
-
-    nodes = {item['id']: (item['lon'], item['lat'])
-             for item in json['elements']
-             if item['type'] == 'node'}
-
-    with fiona.open(shapefile, 'w', driver="ESRI Shapefile",
-                    crs=crs, schema=schema, encoding='utf-8') as output:
-
-        for item in json['elements']:
-            if item['type'] == 'way':
-                points = [nodes[int(i)] for i in item['nodes']]
-                output.write(
-                    {'geometry': mapping(LineString(points)),
-                     'properties': {
-                         'NAME': item['tags']['name']
-                         if 'name' in item['tags'] else '',
-                         "TYPE": item['tags']['aeroway']}
-                     })
 
 
 def get_roads_json(south, north, west, east):
