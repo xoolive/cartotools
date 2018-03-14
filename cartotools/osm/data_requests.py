@@ -53,7 +53,7 @@ class DataRequests(object):
 
     query = ('[out:{format}][timeout:{timeout}]{maxsize};'
              '({infrastructure}{filters}'
-             '({south:.8f},{west:.8f},{north:.8f},{east:.8f});>;);out;')
+             '({south:.8f},{west:.8f},{north:.8f},{east:.8f});>;);out {meta};')
 
     url = 'http://www.overpass-api.de/api/interpreter'
 
@@ -79,23 +79,22 @@ class DataRequests(object):
     def json_request(self, within: Optional[NameRequest]=None,
                      **kwargs) -> Response:
 
-        query_str = self.get_query('json', within, **kwargs)
-
+        query_str = self.get_query('json', within, meta="", **kwargs)
+        
         hashcode = hashlib.md5(query_str.encode('utf-8')).hexdigest()
         response = self.cache.get(hashcode, None)
         if response is not None:
             return self.cache[hashcode]
 
-        response = json_request(url=self.url, data={'data': query_str},
-                                timeout=kwargs['timeout'])
-        response = Response(response)
+        response = requests.post(url=self.url, data=query_str)
+        response = Response(response.json())
         self.cache[hashcode] = response
         return response
 
     def xml_request(self, within: Optional[NameRequest]=None,
                     **kwargs) -> str:
 
-        query_str = self.get_query('xml', within, **kwargs)
+        query_str = self.get_query('xml', within, meta="meta", **kwargs)
 
         data = {'data': query_str}
         response = requests.post(self.url, **data)
