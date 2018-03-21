@@ -5,6 +5,6 @@ setup(name="cartotools",
       description="Making cartopy suit my needs",
       license="MIT",
       packages=['cartotools', 'cartotools.crs', 'cartotools.img_tiles',
-      		'cartotools.osm'],
+                'cartotools.osm', 'cartotools.tools'],
       author="Xavier Olive",
       )
