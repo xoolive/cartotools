@@ -1,7 +1,7 @@
 from collections import Iterable
 from functools import partial
 from pathlib import Path
-from typing import Iterator, Tuple, Optional
+from typing import Dict, Iterator, Tuple, Optional
 
 import numpy as np
 from matplotlib.path import Path as Mpl_Path
@@ -9,28 +9,30 @@ from matplotlib.path import Path as Mpl_Path
 import pyproj
 from cartotools import img_tiles
 from cartotools.osm import location, request, tags
-from shapely.ops import transform
+from shapely.ops import transform, cascaded_union
+from shapely.geometry import base
 
 
-def make_pair(coords: Tuple[int, int, int], ag, target) -> Tuple[np.ndarray, np.ndarray]:
+def make_pair(coords: Tuple[int, int, int], ag,
+              target: Dict[int, base.BaseGeometry]) -> Tuple[np.ndarray, np.ndarray]:
+    
     x = ag.one_image(coords)
     X, Y = np.meshgrid(x[1], x[2])
-    output = np.zeros_like(X, np.bool)
+    output = np.zeros_like(X, np.uint8)
+    mask = np.zeros_like(X, np.bool)
     points = np.hstack((X.flatten()[:, np.newaxis],
                         Y.flatten()[:, np.newaxis]))
-
-    if not isinstance(target, Iterable):
-        target = [target]
-
-    for g in target:
-        flags = Mpl_Path(np.stack(g.buffer(5).exterior.coords)
-                         ).contains_points(points)
-        output |= flags.reshape(X.shape).astype(np.bool)
-
+    for idx, geometry in target.items():
+        for g in geometry:
+            flags = Mpl_Path(np.stack(g.buffer(5).exterior.coords)
+                             ).contains_points(points)
+            mask |= flags.reshape(X.shape).astype(np.bool) 
+        output[mask] = idx
+    
     return x[0], output[::-1,:]
 
 def rec_make_pair(coords: Tuple[int, int, int], augment: int,
-                  ag, target) -> Tuple[np.ndarray, np.ndarray]:
+                  ag, target: Dict[int, base.BaseGeometry]) -> Tuple[np.ndarray, np.ndarray]:
     if augment==0:
         return make_pair(coords, ag, target)
     else:
@@ -43,21 +45,19 @@ def rec_make_pair(coords: Tuple[int, int, int], augment: int,
 
         return (np.vstack([np.hstack([x0, x1]),
                           np.hstack([x2, x3])]),
-               np.vstack([
-                          np.hstack([output0, output1]),
-                           np.hstack([output2, output3]),
-                          ]))
+               np.vstack([np.hstack([output0, output1]),
+                          np.hstack([output2, output3]),]))
 
 
-def image_pairs(name: str, tag: str, zoom_level: int = 13,
+def image_pairs(name: str, tag: Dict[int, str],
+                zoom_level: int = 13, augment: int = 0,
                 cache_dir: Optional[Path] = None,
-                service: str = 'ArcGIS',
-                augment: int = 0
+                service: str='ArcGIS'
                 ) -> Iterator[Tuple[np.ndarray, np.ndarray]]:
 
-    response = request.json_request(location[name], **getattr(tags, tag))
-    response.geometry()
-
+    response = {k: request.json_request(location[name], **getattr(tags, t))
+                for k, t in tag.items()}
+               
     ag = getattr(img_tiles, service)()
     if cache_dir is not None:
         ag.cache_directory = cache_dir.as_posix()
@@ -67,7 +67,7 @@ def image_pairs(name: str, tag: str, zoom_level: int = 13,
         pyproj.Proj(init='EPSG:4326'),
         pyproj.Proj(**ag.crs.proj4_params))
 
-    target = transform(partial_t, response.geometry())
+    target = {k: transform(partial_t, r.geometry()) for k, r in response.items()}
 
-    for coords in ag.find_images(target, zoom_level):
+    for coords in ag.find_images(cascaded_union(target.values()), zoom_level):
         yield coords, rec_make_pair(coords, augment, ag, target)
