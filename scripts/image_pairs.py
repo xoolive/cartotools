@@ -16,7 +16,7 @@ def test_image_pairs(name: str, tag: str, zoom_level: int,
 
     for i, (tile, mask) in zip(range(size), pairs):
         ax[i, 0].imshow(tile,)
-        ax[i, 1].imshow(mask, origin='lower')
+        ax[i, 1].imshow(mask,)
         ax[i, 0].axis('off')
         ax[i, 1].axis('off')
 
