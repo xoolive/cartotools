@@ -1,6 +1,10 @@
 airport = {'infrastructure': 'way["aeroway"]',
            'filters': ''}
 
+
+river = {'infrastructure': 'way["waterway"]',
+           'filters': '["waterway"~"river"]'}
+
 # -- Amenities --
 
 # - amenity=fountain,bench,place_of_worship,marketplace
@@ -123,4 +127,5 @@ tree = {'infrastructure': 'nodes["natural"]',
 
 node_width = {
     'wind_turbine': 27,  # http://energiesduhautlivradois.info/emprise_sol.html
+    'pipeline': 5
 }

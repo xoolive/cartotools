@@ -1,6 +1,6 @@
 from collections import OrderedDict, UserDict
 from functools import partial
-from typing import Any, Dict, List, NamedTuple
+from typing import Any, Dict, List, NamedTuple, Tuple
 
 from shapely.geometry import shape
 from shapely.ops import transform
@@ -9,8 +9,9 @@ from .core import json_request
 
 __all__ = ['location']
 
-boundingbox = NamedTuple("boundingbox", [('west', float), ('east', float),
-                                         ('south', float), ('north', float)])
+boundingbox = NamedTuple("boundingbox", [
+    ('west', float), ('east', float), ('south', float), ('north', float)
+])
 
 
 def name_request(query: str):
@@ -43,6 +44,7 @@ class NameRequest(object):
             raise ValueError(f"No '{name}' found on OpenStreetMap")
         json = results[0]
         self.display_name = json['display_name']
+        # may look useless but we enjoy the named tuple in data_requests.py
         self.bbox = boundingbox(south=float(json['boundingbox'][0]),
                                 north=float(json['boundingbox'][1]),
                                 west=float(json['boundingbox'][2]),
@@ -50,6 +52,29 @@ class NameRequest(object):
         self.shape = shape(json['geojson'])
         self.proj_shape = None
 
+    @property
+    def bounds(self) -> Tuple[float, float, float, float]:
+        return self.shape.bounds
+    
+    @property
+    def extent(self) -> Tuple[float, float, float, float]:
+        west, south, east, north = self.bounds
+        return west, east, south, north
+    
+    @property
+    def _geom(self):
+        return self.shape._geom
+    
+    @property
+    def type(self):
+        return self.shape.type
+    
+    def __iter__(self):
+        yield self.shape
+
+    def __repr__(self):
+        return "NameRequest: {}".format(self.display_name)
+    
     def _repr_svg_(self):
         print(self.display_name)
         if self.proj_shape is None:
@@ -59,11 +84,10 @@ class NameRequest(object):
     def shape_project(self, projection=None):
         import pyproj  # leave it as optional import
         if projection is None:
+            bounds = self.bounds
             projection = pyproj.Proj(proj='aea',  # equivalent projection
-                                     lat1=self.shape.bounds[1],
-                                     lat2=self.shape.bounds[3],
-                                     lon1=self.shape.bounds[0],
-                                     lon2=self.shape.bounds[2])
+                                     lat1=bounds[1], lat2=bounds[3],
+                                     lon1=bounds[0], lon2=bounds[2])
         self.proj_shape = transform(
             partial(pyproj.transform, pyproj.Proj(init='EPSG:4326'),
                     projection),
@@ -78,6 +102,9 @@ class CacheRequests(UserDict):
         result = NameRequest(name)
         self[lower] = result
         return result
+    
+    def __call__(self, name: str):
+        return self[name]
 
 
 location = CacheRequests()
