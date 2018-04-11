@@ -2,7 +2,7 @@ import hashlib
 import json
 from collections import UserDict
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import requests
 from shapely.geometry import LineString, Polygon, Point
@@ -34,10 +34,57 @@ class Response(object):
             return cascaded_union([p[1] for p in self.ways.values()])
         return cascaded_union([Point(p['lon'], p['lat'])
                                for p in self.nodes.values()])
+    
+    @property
+    def shape(self):
+        return self.geometry()
+    
+    @property
+    def bounds(self) -> Tuple[float, float, float, float]:
+        return self.shape.bounds
+    
+    @property
+    def extent(self) -> Tuple[float, float, float, float]:
+        west, south, east, north = self.bounds
+        return west, east, south, north
         
     @property
     def _geom(self):
-        return self.geometry()
+        return self.shape._geom
+    
+    @property
+    def type(self):
+        return self.shape.type
+    
+    def __iter__(self):
+        if len(self.ways) > 0:
+            for p in self.ways.values():
+                yield p[1]
+            return
+        for p in self.point.values():
+            yield Point(p['lon'], p['lat'])
+            
+    def subset(rep, **kwargs):
+        for key, (meta, shape) in rep.ways.items():
+            for k, v in kwargs.items():
+                if k in meta['tags'] and meta['tags'][k] == v:
+                    yield key, (meta, shape)
+                    
+    def keys(rep):
+        keys = set()
+        for meta, shape in rep.ways.values():
+            for key in meta['tags'].keys():
+                keys.add(key)
+
+        return keys
+    
+    def values(rep, k):
+        values = set()
+        for meta, shape in rep.ways.values():
+            for key in meta['tags'].keys():
+                if key == k:
+                    values.add(meta['tags'][key])
+        return values
 
 
 class OSMCache(UserDict):
@@ -113,6 +160,10 @@ class DataRequests(object):
         data = {'data': query_str}
         response = requests.post(self.url, **data)
         return response.content.decode('utf8')
+    
+    def __call__(self, within: Optional[NameRequest]=None,
+                 **kwargs) -> Response:
+        return self.json_request(within, **kwargs)
 
 
 request = DataRequests()
