@@ -1,11 +1,9 @@
 from collections import OrderedDict, UserDict
-from functools import partial
-from typing import Any, Dict, List, NamedTuple, Tuple
+from typing import Any, Dict, Iterator, List, NamedTuple
 
-from shapely.geometry import shape
-from shapely.ops import transform
+from shapely.geometry import base, shape
 
-from .core import json_request
+from .core import ShapelyMixin, json_request
 
 __all__ = ['location']
 
@@ -14,7 +12,7 @@ boundingbox = NamedTuple("boundingbox", [
 ])
 
 
-def name_request(query: str):
+def name_request(query: str, **kwargs):
 
     params: Dict['str', Any] = OrderedDict()
 
@@ -33,79 +31,52 @@ def name_request(query: str):
             params[key] = query[key]
 
     url = 'https://nominatim.openstreetmap.org/search'
-    return json_request(url, timeout=30, params=params)
+    return json_request(url, timeout=30, params=params, **kwargs)
 
 
-class NameRequest(object):
+class NameRequest(ShapelyMixin):
 
-    def __init__(self, name: str) -> None:
-        results: List[Dict[str, Any]] = name_request(name)
+    def __init__(self, name: str, **kwargs) -> None:
+
+        results: List[Dict[str, Any]] = name_request(name, **kwargs)
+
         if len(results) == 0:
             raise ValueError(f"No '{name}' found on OpenStreetMap")
+
         json = results[0]
         self.display_name = json['display_name']
+
         # may look useless but we enjoy the named tuple in data_requests.py
         self.bbox = boundingbox(south=float(json['boundingbox'][0]),
                                 north=float(json['boundingbox'][1]),
                                 west=float(json['boundingbox'][2]),
                                 east=float(json['boundingbox'][3]))
+
         self.shape = shape(json['geojson'])
+
         self.proj_shape = None
 
-    @property
-    def bounds(self) -> Tuple[float, float, float, float]:
-        return self.shape.bounds
-    
-    @property
-    def extent(self) -> Tuple[float, float, float, float]:
-        west, south, east, north = self.bounds
-        return west, east, south, north
-    
-    @property
-    def _geom(self):
-        return self.shape._geom
-    
-    @property
-    def type(self):
-        return self.shape.type
-    
-    def __iter__(self):
+    def __iter__(self) -> Iterator[base.BaseGeometry]:
+        # convenient for cascaded_union
         yield self.shape
 
-    def __repr__(self):
-        return "NameRequest: {}".format(self.display_name)
-    
-    def _repr_svg_(self):
-        print(self.display_name)
-        if self.proj_shape is None:
-            self.shape_project()
-        return self.proj_shape._repr_svg_()
 
-    def shape_project(self, projection=None):
-        import pyproj  # leave it as optional import
-        if projection is None:
-            bounds = self.bounds
-            projection = pyproj.Proj(proj='aea',  # equivalent projection
-                                     lat1=bounds[1], lat2=bounds[3],
-                                     lon1=bounds[0], lon2=bounds[2])
-        self.proj_shape = transform(
-            partial(pyproj.transform, pyproj.Proj(init='EPSG:4326'),
-                    projection),
-            self.shape)
+class CachedRequests(UserDict):
 
+    kwargs: Dict = dict()
 
-class CacheRequests(UserDict):
-    def __missing__(self, name: str):
+    def __missing__(self, name: str) -> NameRequest:
         lower = name.lower()
         if lower in self:
             return self[lower]
-        result = NameRequest(name)
+        result = NameRequest(name, **self.kwargs)
         self[lower] = result
         return result
-    
-    def __call__(self, name: str):
+
+    # a round bracket call is more natural!
+    def __call__(self, name: str) -> NameRequest:
         return self[name]
 
 
-location = CacheRequests()
+location = CachedRequests()
 location._ipython_key_completions_ = location.keys()  # type: ignore
