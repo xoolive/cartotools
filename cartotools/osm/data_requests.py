@@ -2,88 +2,75 @@ import hashlib
 import json
 from collections import UserDict
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Iterator, Optional, Set, Tuple, Union
 
 import requests
-from shapely.geometry import LineString, Polygon, Point
+from shapely.geometry import LineString, Point, Polygon, base
 from shapely.ops import cascaded_union
 
-from .core import json_request
-from .name_requests import NameRequest
+from .core import ShapelyMixin, json_request
+from .name_requests import NameRequest, location
 
 __all__ = ['request']
 
 
-class Response(object):
+class Response(ShapelyMixin):
 
-    def __init__(self, response: Dict[str, Any]) -> None:
+    def __init__(self, response: Dict[str, Any], name: str) -> None:
+
         self.response = response
+
         self.nodes = {p['id']: p for p in self.response['elements']
                       if p['type'] == 'node'}
+
         self.ways = {p['id']: (p, LineString(list((self.nodes[node]['lon'],
                                                    self.nodes[node]['lat']))
                                              for node in p['nodes']))
                      for p in self.response['elements']
                      if p['type'] == 'way'}
-        # todo improve this shit
-        self.ways = {key: (value, (Polygon(shape) if shape.is_closed else shape))
+
+        # TODO improve this shit
+        self.ways = {key: (value, (Polygon(shape)
+                                   if shape.is_closed else shape))
                      for (key, (value, shape)) in self.ways.items()}
-        
-    def geometry(self):
-        if len(self.ways) > 0:
-            return cascaded_union([p[1] for p in self.ways.values()])
-        return cascaded_union([Point(p['lon'], p['lat'])
-                               for p in self.nodes.values()])
-    
+
+        self.relations = {p['id']: p for p in self.response['elements']
+                          if p['type'] == 'relation'}
+
+        self.display_name: str = name  # TODO
+
     @property
-    def shape(self):
-        return self.geometry()
-    
-    @property
-    def bounds(self) -> Tuple[float, float, float, float]:
-        return self.shape.bounds
-    
-    @property
-    def extent(self) -> Tuple[float, float, float, float]:
-        west, south, east, north = self.bounds
-        return west, east, south, north
-        
-    @property
-    def _geom(self):
-        return self.shape._geom
-    
-    @property
-    def type(self):
-        return self.shape.type
-    
+    def shape(self) -> base.BaseGeometry:
+        return cascaded_union(list(self))
+
     def __iter__(self):
         if len(self.ways) > 0:
             for p in self.ways.values():
                 yield p[1]
             return
-        for p in self.point.values():
+        for p in self.nodes.values():
             yield Point(p['lon'], p['lat'])
-            
-    def subset(rep, **kwargs):
-        for key, (meta, shape) in rep.ways.items():
+
+    def subset(self, **kwargs) -> Iterator[
+            Tuple[str, Tuple[Dict, base.BaseGeometry]]]:
+        for key, (meta, shape) in self.ways.items():
             for k, v in kwargs.items():
                 if k in meta['tags'] and meta['tags'][k] == v:
                     yield key, (meta, shape)
-                    
-    def keys(rep):
+
+    def keys(self) -> Set[str]:
         keys = set()
-        for meta, shape in rep.ways.values():
+        for meta, shape in self.ways.values():
             for key in meta['tags'].keys():
                 keys.add(key)
-
         return keys
-    
-    def values(rep, k):
+
+    def values(self, key: str) -> Set[str]:
         values = set()
-        for meta, shape in rep.ways.values():
-            for key in meta['tags'].keys():
-                if key == k:
-                    values.add(meta['tags'][key])
+        for meta, shape in self.ways.values():
+            for key_ in meta['tags'].keys():
+                if key_ == key:
+                    values.add(meta['tags'][key_])
         return values
 
 
@@ -98,7 +85,7 @@ class OSMCache(UserDict):
     def __missing__(self, hashcode: str):
         filename = self.cachedir / f"{hashcode}.json"
         if filename.exists():
-            response = Response(json.loads(filename.read_text()))
+            response = Response(json.loads(filename.read_text()), hashcode)
             # Attention à ne pas réécrire le fichier...
             super().__setitem__(hashcode, response)
             return response
@@ -114,7 +101,8 @@ class DataRequests(object):
 
     query = ('[out:{format}][timeout:{timeout}]{maxsize};'
              '({infrastructure}{filters}'
-             '({south:.8f},{west:.8f},{north:.8f},{east:.8f});>;);out {meta};')
+             '({south:.8f},{west:.8f},{north:.8f},{east:.8f});>;);'
+             'out {meta};')
 
     url = 'http://www.overpass-api.de/api/interpreter'
 
@@ -137,18 +125,37 @@ class DataRequests(object):
 
         return query_str
 
-    def json_request(self, within: Optional[NameRequest]=None,
+    def json_request(self, within: Optional[Union[str, NameRequest]]=None,
+                     requests_extra: Dict[str, str] = dict(),
                      **kwargs) -> Response:
 
-        query_str = self.get_query('json', within, meta="", **kwargs)
-        
+        if isinstance(within, str):
+            within = location(within)
+
+        infrastructure = kwargs['infrastructure']
+        del kwargs['infrastructure']
+
+        filters = ''
+        for key, value in kwargs.items():
+            if value is None:
+                filters += '["{}"]'.format(key)
+            else:
+                filters += '["{}"~"{}"]'.format(key, value)
+
+        query_str = self.get_query(format_='json',
+                                   within=within,
+                                   meta="",
+                                   infrastructure=infrastructure,
+                                   filters=filters)
+
         hashcode = hashlib.md5(query_str.encode('utf-8')).hexdigest()
         response = self.cache.get(hashcode, None)
         if response is not None:
             return self.cache[hashcode]
 
-        response = requests.post(url=self.url, data=query_str)
-        response = Response(response.json())
+        response = requests.post(url=self.url, data=query_str,
+                                 **requests_extra)
+        response = Response(response.json(), hashcode)
         self.cache[hashcode] = response
         return response
 
@@ -160,7 +167,8 @@ class DataRequests(object):
         data = {'data': query_str}
         response = requests.post(self.url, **data)
         return response.content.decode('utf8')
-    
+
+    # more natural than a subsequent call to json_request!
     def __call__(self, within: Optional[NameRequest]=None,
                  **kwargs) -> Response:
         return self.json_request(within, **kwargs)

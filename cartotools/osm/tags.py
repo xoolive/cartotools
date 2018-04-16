@@ -1,14 +1,18 @@
-airport = {'infrastructure': 'way["aeroway"]',
-           'filters': ''}
-
+airport = {'infrastructure': 'way["aeroway"]', }
 
 river = {'infrastructure': 'way["waterway"]',
-           'filters': '["waterway"~"river"]'}
+         'waterway': 'river'}
+
+riverbank = {'infrastructure': 'way["waterway"]',
+             'filters': '["waterway"~"riverbank"]'}
+
+stream = {'infrastructure': 'way["waterway"]',
+          'filters': '["waterway"~"stream"]'}
+
+canal = {'infrastructure': 'way["waterway"]',
+         'filters': '["waterway"~"canal"]'}
 
 # -- Amenities --
-
-# - amenity=fountain,bench,place_of_worship,marketplace
-# - amenity=table,recycling,waste_disposal
 
 place_of_worship = {'infrastructure': 'way["amenity"]',
                     'filters':'["amenity"~"place_of_worship"]'}
@@ -28,7 +32,7 @@ recycling = {'infrastructure': 'way["amenity"]',
 # -- Leisure  --
 
 park = {'infrastructure': 'way["leisure"]',
-         'filters':'["leisure"~"park"]'}  # segmentation
+        'filters':'["leisure"~"park"]'}  # segmentation
 
 stadium = {'infrastructure': 'way["leisure"]',
            'filters':'["leisure"~"stadium"]'}  # detection
@@ -81,17 +85,17 @@ golf = {'infrastructure': 'ways["sport"]',
         'filters': '["sport"~"golf"]'}
 
 horse_racing = {'infrastructure': 'ways["sport"]',
-        'filters': '["sport"~"horse_racing"]'}
+                'filters': '["sport"~"horse_racing"]'}
 
 skatepark = {'infrastructure': 'ways["sport"]',
-        'filters': '["sport"~"skatepark"]'}
+             'filters': '["sport"~"skatepark"]'}
 
 tennis = {'infrastructure': 'ways["sport"]',
-        'filters': '["sport"~"tennis"]'}
+          'filters': '["sport"~"tennis"]'}
 
 
 tree = {'infrastructure': 'nodes["natural"]',
-                  'filters': '["natural"~"tree"]'}
+        'filters': '["natural"~"tree"]'}
 
 # - barrier=border_control,toll_booth
 # - building=bridge (plutot man_made=bridge)
