@@ -4,98 +4,97 @@ river = {'infrastructure': 'way["waterway"]',
          'waterway': 'river'}
 
 riverbank = {'infrastructure': 'way["waterway"]',
-             'filters': '["waterway"~"riverbank"]'}
+             'waterway': 'riverbank'}
 
 stream = {'infrastructure': 'way["waterway"]',
-          'filters': '["waterway"~"stream"]'}
+          'waterway': 'stream'}
 
 canal = {'infrastructure': 'way["waterway"]',
-         'filters': '["waterway"~"canal"]'}
+         'waterway': 'canal'}
 
 # -- Amenities --
 
 place_of_worship = {'infrastructure': 'way["amenity"]',
-                    'filters':'["amenity"~"place_of_worship"]'}
+                    'amenity': "place_of_worship"}
 
 marketplace = {'infrastructure': 'way["amenity"]',
-               'filters':'["amenity"~"marketplace"]'}
+               'amenity': 'marketplace'}
 
 fountain = {'infrastructure': 'way["amenity"]',
-            'filters':'["amenity"~"fountain"]'}
+            'amenity': 'fountain'}
 
 waste_disposal = {'infrastructure': 'way["amenity"]',
-                  'filters':'["amenity"~"waste_disposal"]'}
+                  'amenity': 'waste_disposal'}
 
 recycling = {'infrastructure': 'way["amenity"]',
-             'filters':'["amenity"~"recycling"]'}
+             'amenity': 'recycling'}
 
 # -- Leisure  --
 
 park = {'infrastructure': 'way["leisure"]',
-        'filters':'["leisure"~"park"]'}  # segmentation
+        'leisure': 'park'}  # segmentation
 
 stadium = {'infrastructure': 'way["leisure"]',
-           'filters':'["leisure"~"stadium"]'}  # detection
+           'leisure': 'stadium'}  # detection
 
 swimming_pool = {'infrastructure': 'way["leisure"]',
-                 'filters':'["leisure"~"swimming_pool"]'}  # detection
+                 'leisure': 'swimming_pool'}  # detection
 
 # -- Power --
 
 # - power=generator,plant,heliostat,bay,busbar,pole,portal,transformer,tower,terminal
 
 wind_turbine = {'infrastructure': 'node["power"]',
-                'filters': '["generator:source"~"wind"]'}
+                "generator:source": "wind"}
 
 nuclear_plant = {'infrastructure': 'node["power"]',
-                 'filters': '["generator:source"~"nuclear"]'}
+                 'generator:source': "nuclear"}
 
 solar_power = {'infrastructure': 'node["power"]',
-               'filters': '["generator:source"~"solar"]'}
+               'generator:source': "solar"}
 
 hydroelectric = {'infrastructure': 'node["power"]',
-                 'filters': '["generator:source"~"hydro"]'}
+                 "generator:source": "hydro"}
 
 wave_power = {'infrastructure': 'node["power"]',
-              'filters': '["generator:source"~"wave"]'}
+              "generator:source": "wave"}
 
 biomass = {'infrastructure': 'node["power"]',
-           'filters': '["generator:source"~"biomass"]'}
+           "generator:source": "biomass"}
 
 coal_power = {'infrastructure': 'node["power"]',
-              'filters': '["generator:source"~"biomass"]'}
+              "generator:source": "coal_power"}
 
 gas_plant = {'infrastructure': 'node["power"]',
-             'filters': '["generator:source"~"gas"]'}
+             "generator:source": "gas"}
 
 oil_plant = {'infrastructure': 'node["power"]',
-             'filters': '["generator:source"~"oil"]'}
+             'generator:source': "oil"}
 
 waste_incineration  = {'infrastructure': 'node["power"]',
-                       'filters': '["generator:source"~"waste"]'}
+                       'generator:source': "waste"}
 
 pipeline = {'infrastructure': 'way["man_made"]',
-            'filters': '["man_made"~"pipeline"]'}
+            'man_made': "pipeline"}
 
 # -- Sport --
 
 # - sport=golf,horse_racing,skatepark,tennis
 
 golf = {'infrastructure': 'ways["sport"]',
-        'filters': '["sport"~"golf"]'}
+        'sport': 'golf'}
 
 horse_racing = {'infrastructure': 'ways["sport"]',
-                'filters': '["sport"~"horse_racing"]'}
+                'sport': "horse_racing"}
 
 skatepark = {'infrastructure': 'ways["sport"]',
-             'filters': '["sport"~"skatepark"]'}
+             'sport': "skatepark"}
 
 tennis = {'infrastructure': 'ways["sport"]',
-          'filters': '["sport"~"tennis"]'}
-
+          'sport': "tennis"}
 
 tree = {'infrastructure': 'nodes["natural"]',
-        'filters': '["natural"~"tree"]'}
+        'natural': "tree"}
 
 # - barrier=border_control,toll_booth
 # - building=bridge (plutot man_made=bridge)
