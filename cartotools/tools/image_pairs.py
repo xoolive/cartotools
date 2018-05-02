@@ -14,7 +14,8 @@ from shapely.geometry import base
 
 
 def make_pair(coords: Tuple[int, int, int], ag,
-              target: Dict[int, base.BaseGeometry]) -> Tuple[np.ndarray, np.ndarray]:
+              target: Dict[int, base.BaseGeometry],
+              buffer: Dict[int, Optional[int]]=None) -> Tuple[np.ndarray, np.ndarray]:
     
     x = ag.one_image(coords)
     X, Y = np.meshgrid(x[1], x[2])
@@ -24,7 +25,9 @@ def make_pair(coords: Tuple[int, int, int], ag,
                         Y.flatten()[:, np.newaxis]))
     for idx, geometry in target.items():
         for g in geometry:
-            flags = Mpl_Path(np.stack(g.buffer(5).exterior.coords)
+            if buffer[idx] is not None:
+                g = g.buffer(buffer[idx])
+            flags = Mpl_Path(np.stack(g.exterior.coords)
                              ).contains_points(points)
             mask |= flags.reshape(X.shape).astype(np.bool) 
         output[mask] = idx
@@ -32,16 +35,17 @@ def make_pair(coords: Tuple[int, int, int], ag,
     return x[0], output[::-1,:]
 
 def rec_make_pair(coords: Tuple[int, int, int], augment: int,
-                  ag, target: Dict[int, base.BaseGeometry]) -> Tuple[np.ndarray, np.ndarray]:
-    if augment==0:
-        return make_pair(coords, ag, target)
+                  ag, target: Dict[int, base.BaseGeometry],
+                  buffer: Dict[int, Optional[int]]) -> Tuple[np.ndarray, np.ndarray]:
+    if augment == 0:
+        return make_pair(coords, ag, target, buffer)
     else:
         x, y, z = coords
 
-        x0, output0 = rec_make_pair((2*x, 2*y, z+1), augment-1, ag, target)
-        x1, output1 = rec_make_pair((2*x+1, 2*y, z+1), augment-1, ag, target)
-        x2, output2 = rec_make_pair((2*x, 2*y+1, z+1), augment-1, ag, target)
-        x3, output3 = rec_make_pair((2*x+1, 2*y+1, z+1), augment-1, ag, target)
+        x0, output0 = rec_make_pair((2*x, 2*y, z+1), augment-1, ag, target, buffer)
+        x1, output1 = rec_make_pair((2*x+1, 2*y, z+1), augment-1, ag, target, buffer)
+        x2, output2 = rec_make_pair((2*x, 2*y+1, z+1), augment-1, ag, target, buffer)
+        x3, output3 = rec_make_pair((2*x+1, 2*y+1, z+1), augment-1, ag, target, buffer)
 
         return (np.vstack([np.hstack([x0, x1]),
                           np.hstack([x2, x3])]),
@@ -52,11 +56,13 @@ def rec_make_pair(coords: Tuple[int, int, int], augment: int,
 def image_pairs(name: str, tag: Dict[int, str],
                 zoom_level: int = 13, augment: int = 0,
                 cache_dir: Optional[Path] = None,
-                service: str='ArcGIS'
-                ) -> Iterator[Tuple[np.ndarray, np.ndarray]]:
+                service: str='ArcGIS',
+               ) -> Iterator[Tuple[np.ndarray, np.ndarray]]:
 
     response = {k: request.json_request(location[name], **getattr(tags, t))
                 for k, t in tag.items()}
+    
+    buffer = {k: tags.node_width.get(v, None) for k, v in tag.items()}
                
     ag = getattr(img_tiles, service)()
     if cache_dir is not None:
@@ -70,4 +76,4 @@ def image_pairs(name: str, tag: Dict[int, str],
     target = {k: transform(partial_t, r.geometry()) for k, r in response.items()}
 
     for coords in ag.find_images(cascaded_union(target.values()), zoom_level):
-        yield coords, rec_make_pair(coords, augment, ag, target)
+        yield coords, rec_make_pair(coords, augment, ag, target, buffer)
