@@ -66,6 +66,9 @@ oil_plant = {'infrastructure': 'node["power"]',
 waste_incineration  = {'infrastructure': 'node["power"]',
                        'filters': '["generator:source"~"waste"]'}
 
+pipeline = {'infrastructure': 'way["man_made"]',
+            'filters': '["man_made"~"pipeline"]'}
+
 # -- Sport --
 
 # - sport=golf,horse_racing,skatepark,tennis
@@ -118,3 +121,6 @@ tree = {'infrastructure': 'nodes["natural"]',
 # - tourism=camp_site,caravan_site,zoo,theme_park
 # - waterway=river,stream,canal
 
+node_width = {
+    'wind_turbine': 27,  # http://energiesduhautlivradois.info/emprise_sol.html
+}
