@@ -4,7 +4,7 @@ from functools import partial
 
 import tqdm
 from cartotools import img_tiles
-from cartotools.osm import tags, get, request
+from cartotools.osm import tags, location, request
 from cartotools.crs import PlateCarree
 from concurrent import futures
 from shapely.geometry import Polygon, Point
@@ -36,14 +36,14 @@ def webcrawl(bbox: type_bbox, tag: Optional[str],
     if tag is None:
         # if no tag, take the whole bounding box
         if isinstance(bbox, str):
-            bbox_str = get[bbox]['boundingbox']
+            bbox_str = location[bbox]['boundingbox']
             south, north, west, east = tuple(float(f) for f in bbox_str)
             bbox = west, east, south, north
         bbox = Polygon([[bbox[0], bbox[2]], [bbox[0], bbox[3]],
                         [bbox[1], bbox[3]], [bbox[1], bbox[2]]])
     else:
         # otherwise, take only the proper geometries
-        response = request.json_request(get[bbox], **getattr(tags, tag))
+        response = request.json_request(location[bbox], **getattr(tags, tag))
         bbox = response.geometry()
 
     target_domain = transform(

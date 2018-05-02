@@ -8,7 +8,7 @@
 sudo apt-get install libproj-dev
 pip install Cartopy
 pip install requests pillow OSWLib appdirs
-pip install git+https://github.com/xoolive/cartotools
+python setup.py install
 ```
 
 ### Usage
@@ -19,3 +19,21 @@ For now, just replace:
 import cartotools.crs  # instead of cartopy.crs
 import cartotools.img_tiles  # instead of cartopy.io.img_tiles
 ```
+
+### Openstreetmap
+
+```python
+from cartotools.osm import location, request, tags
+```
+
+### Scripts
+
+Get all tiles (zoom level 13) in geolocation "Occitanie" matching tag "wind_turbine" in Openstreetmap.
+
+```sh
+python scripts/get_tiles.py -b Occitanie -g wind_turbine  -z 13 -o cache
+```
+
+### More code
+
+See https://gitlab.com/xoolive/cartotools/snippets
