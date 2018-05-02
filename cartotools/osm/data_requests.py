@@ -5,7 +5,8 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import requests
-from shapely.geometry import LineString
+from shapely.geometry import LineString, Polygon, Point
+from shapely.ops import cascaded_union
 
 from .core import json_request
 from .name_requests import NameRequest
@@ -24,6 +25,19 @@ class Response(object):
                                              for node in p['nodes']))
                      for p in self.response['elements']
                      if p['type'] == 'way'}
+        # todo improve this shit
+        self.ways = {key: (value, (Polygon(shape) if shape.is_closed else shape))
+                     for (key, (value, shape)) in self.ways.items()}
+        
+    def geometry(self):
+        if len(self.ways) > 0:
+            return cascaded_union([p[1] for p in self.ways.values()])
+        return cascaded_union([Point(p['lon'], p['lat'])
+                               for p in self.nodes.values()])
+        
+    @property
+    def _geom(self):
+        return self.geometry()
 
 
 class OSMCache(UserDict):
