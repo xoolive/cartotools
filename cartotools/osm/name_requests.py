@@ -7,7 +7,7 @@ from shapely.ops import transform
 
 from .core import json_request
 
-__all__ = ['get']
+__all__ = ['location']
 
 boundingbox = NamedTuple("boundingbox", [('west', float), ('east', float),
                                          ('south', float), ('north', float)])
@@ -80,5 +80,5 @@ class CacheRequests(UserDict):
         return result
 
 
-get = CacheRequests()
-get._ipython_key_completions_ = get.keys  # type: ignore
+location = CacheRequests()
+location._ipython_key_completions_ = location.keys()  # type: ignore
