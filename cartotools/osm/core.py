@@ -41,8 +41,8 @@ class ShapelyMixin(object):
         if self.proj_shape is None:
             try:
                 self.shape_project()
-            except ImportError:
-                pass
+            except:
+                return None
         return self.proj_shape._repr_svg_()
 
     def shape_project(self, projection=None):
@@ -82,15 +82,6 @@ def json_request(url, timeout=180, **kwargs):
     """
     Send a request to the Overpass API via HTTP POST and return the JSON
     response.
-    Parameters
-    ----------
-    data : dict or OrderedDict
-        key-value pairs of parameters to post to the API
-    timeout : int
-        the timeout interval for the requests library
-    Returns
-    -------
-    dict
 
     Reference: https://github.com/gboeing/osmnx/blob/master/osmnx/core.py
     """

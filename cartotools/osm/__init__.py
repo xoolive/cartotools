@@ -1,2 +1,2 @@
-from .name_requests import location
-from .data_requests import request
+from .nominatim import location
+from .overpass import request

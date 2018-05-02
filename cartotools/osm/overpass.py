@@ -2,14 +2,14 @@ import hashlib
 import json
 from collections import UserDict
 from pathlib import Path
-from typing import Any, Dict, Iterator, Optional, Set, Tuple, Union
+from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Union
 
 import requests
 from shapely.geometry import LineString, Point, Polygon, base
 from shapely.ops import cascaded_union
 
 from .core import ShapelyMixin, json_request
-from .name_requests import NameRequest, location
+from .nominatim import Nominatim, location
 
 __all__ = ['request']
 
@@ -36,6 +36,9 @@ class Response(ShapelyMixin):
 
         self.relations = {p['id']: p for p in self.response['elements']
                           if p['type'] == 'relation'}
+
+        self.areas = {p['id']: p for p in self.response['elements']
+                      if p['type'] == 'area'}
 
         self.display_name: str = name  # TODO
 
@@ -73,6 +76,12 @@ class Response(ShapelyMixin):
                     values.add(meta['tags'][key_])
         return values
 
+    @property
+    def related(self) -> Dict[int, List[Dict]]:
+        return {key: list(elt for elt in rel['members']
+                          if elt['type']=='relation')
+                for key, rel in self.relations.items()}
+
 
 class OSMCache(UserDict):
 
@@ -97,22 +106,17 @@ class OSMCache(UserDict):
             fh.write(json.dumps(data.response))
 
 
-class DataRequests(object):
+class Overpass(object):
 
-    query = ('[out:{format}][timeout:{timeout}]{maxsize};'
-             '({infrastructure}{filters}'
-             '({south:.8f},{west:.8f},{north:.8f},{east:.8f});>;);'
-             'out {meta};')
+    pattern = ('[out:{format}][timeout:{timeout}]{maxsize};'
+               '({query_type}{filters}{within};>;);'
+               'out {meta};')
 
     url = 'http://www.overpass-api.de/api/interpreter'
 
     cache: Dict['str', Any] = OSMCache()
 
-    def get_query(self, format_: str, within: Optional[NameRequest]=None,
-                  **kwargs) -> str:
-
-        if within is not None:
-            kwargs = {**kwargs, **within.bbox._asdict()}
+    def get_query(self, format_: str, **kwargs) -> str:
 
         if 'maxsize' not in kwargs:
             kwargs['maxsize'] = ''
@@ -121,19 +125,24 @@ class DataRequests(object):
             kwargs['timeout'] = 180
 
         kwargs['format'] = format_
-        query_str = self.query.format(**kwargs)
+        query_str = self.pattern.format(**kwargs)
 
         return query_str
 
-    def json_request(self, within: Optional[Union[str, NameRequest]]=None,
+    def json_request(self, query_type:str,
+                     within: Optional[Union[str, int, Nominatim]]=None,
                      requests_extra: Dict[str, str] = dict(),
                      **kwargs) -> Response:
 
         if isinstance(within, str):
             within = location(within)
-
-        infrastructure = kwargs['infrastructure']
-        del kwargs['infrastructure']
+        if within is None:
+            within = ''
+        elif isinstance(within, int):  # osm_id
+            within = '({})'.format(within)
+        else:
+            pattern = '({south:.8f},{west:.8f},{north:.8f},{east:.8f})'
+            within = pattern.format(**within.bbox._asdict())
 
         filters = ''
         for key, value in kwargs.items():
@@ -142,11 +151,14 @@ class DataRequests(object):
             else:
                 filters += '["{}"~"{}"]'.format(key, value)
 
-        query_str = self.get_query(format_='json',
-                                   within=within,
-                                   meta="",
-                                   infrastructure=infrastructure,
-                                   filters=filters)
+        query_str = self.get_query('json', meta="",
+                                   query_type=query_type,
+                                   filters=filters, within=within,)
+
+        return self.query(query_str)
+
+    def query(self, query_str: str,
+              requests_extra: Dict[str, str] = dict()) -> Response:
 
         hashcode = hashlib.md5(query_str.encode('utf-8')).hexdigest()
         response = self.cache.get(hashcode, None)
@@ -159,19 +171,10 @@ class DataRequests(object):
         self.cache[hashcode] = response
         return response
 
-    def xml_request(self, within: Optional[NameRequest]=None,
-                    **kwargs) -> str:
-
-        query_str = self.get_query('xml', within, meta="meta", **kwargs)
-
-        data = {'data': query_str}
-        response = requests.post(self.url, **data)
-        return response.content.decode('utf8')
-
     # more natural than a subsequent call to json_request!
-    def __call__(self, within: Optional[NameRequest]=None,
+    def __call__(self, within: Optional[Union[int, str, Nominatim]]=None,
                  **kwargs) -> Response:
-        return self.json_request(within, **kwargs)
+        return self.json_request(within=within, **kwargs)
 
 
-request = DataRequests()
+request = Overpass()
