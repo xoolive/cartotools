@@ -66,6 +66,25 @@ oil_plant = {'infrastructure': 'node["power"]',
 waste_incineration  = {'infrastructure': 'node["power"]',
                        'filters': '["generator:source"~"waste"]'}
 
+# -- Sport --
+
+# - sport=golf,horse_racing,skatepark,tennis
+
+golf = {'infrastructure': 'ways["sport"]',
+        'filters': '["sport"~"golf"]'}
+
+horse_racing = {'infrastructure': 'ways["sport"]',
+        'filters': '["sport"~"horse_racing"]'}
+
+skatepark = {'infrastructure': 'ways["sport"]',
+        'filters': '["sport"~"skatepark"]'}
+
+tennis = {'infrastructure': 'ways["sport"]',
+        'filters': '["sport"~"tennis"]'}
+
+
+tree = {'infrastructure': 'nodes["natural"]',
+                  'filters': '["natural"~"tree"]'}
 
 # - barrier=border_control,toll_booth
 # - building=bridge (plutot man_made=bridge)
@@ -80,9 +99,22 @@ waste_incineration  = {'infrastructure': 'node["power"]',
 # - place=island,islet,archipelago
 # - railway=subway_entrance,tram_stop,turntable,railway_crossing
 # - shop=department_store,mall,supermarket,kosk
-# - sport=golf,horse_racing,skatepark,tennis
 # - tourism=attraction,artwork
 # - facilities=dock
 # - waterway=waterfall
 
+# - public_transport=*
+# - landuse=*
+# - barrier=* -> linear barrier
+# - building=*
+# - geological=moraine,outcrop
+# - highway=* in roads, special roads, paths, ...
+# - man_made=pipeline
+# - natural=sand
+# - natural=water,beach,glacier
+# - natural all 'landform'
+# - places=* for populated settlements, urban and rural
+# - railway=light_rail,monorail,rail,tram
+# - tourism=camp_site,caravan_site,zoo,theme_park
+# - waterway=river,stream,canal
 
