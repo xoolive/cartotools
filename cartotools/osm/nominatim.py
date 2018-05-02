@@ -1,5 +1,5 @@
 from collections import OrderedDict, UserDict
-from typing import Any, Dict, Iterator, List, NamedTuple
+from typing import Any, Dict, Iterator, List, NamedTuple, Optional
 
 from shapely.geometry import base, shape
 
@@ -12,7 +12,7 @@ boundingbox = NamedTuple("boundingbox", [
 ])
 
 
-def name_request(query: str, **kwargs):
+def nominatim_request(query: str, **kwargs):
 
     params: Dict['str', Any] = OrderedDict()
 
@@ -34,25 +34,25 @@ def name_request(query: str, **kwargs):
     return json_request(url, timeout=30, params=params, **kwargs)
 
 
-class NameRequest(ShapelyMixin):
+class Nominatim(ShapelyMixin):
 
     def __init__(self, name: str, **kwargs) -> None:
 
-        results: List[Dict[str, Any]] = name_request(name, **kwargs)
+        results: List[Dict[str, Any]] = nominatim_request(name, **kwargs)
 
         if len(results) == 0:
             raise ValueError(f"No '{name}' found on OpenStreetMap")
 
-        json = results[0]
-        self.display_name = json['display_name']
+        self.json = results[0]
+        self.display_name = self.json['display_name']
 
         # may look useless but we enjoy the named tuple in data_requests.py
-        self.bbox = boundingbox(south=float(json['boundingbox'][0]),
-                                north=float(json['boundingbox'][1]),
-                                west=float(json['boundingbox'][2]),
-                                east=float(json['boundingbox'][3]))
+        self.bbox = boundingbox(south=float(self.json['boundingbox'][0]),
+                                north=float(self.json['boundingbox'][1]),
+                                west=float(self.json['boundingbox'][2]),
+                                east=float(self.json['boundingbox'][3]))
 
-        self.shape = shape(json['geojson'])
+        self.shape = shape(self.json['geojson'])
 
         self.proj_shape = None
 
@@ -60,21 +60,29 @@ class NameRequest(ShapelyMixin):
         # convenient for cascaded_union
         yield self.shape
 
+    @property
+    def id(self) -> Optional[int]:
+        if ('osm_type' in self.json and
+                self.json['osm_type'] == 'relation' and
+                'osm_id' in self.json):
+            return int(self.json['osm_id'])
+        return None
+
 
 class CachedRequests(UserDict):
 
     kwargs: Dict = dict()
 
-    def __missing__(self, name: str) -> NameRequest:
+    def __missing__(self, name: str) -> Nominatim:
         lower = name.lower()
         if lower in self:
             return self[lower]
-        result = NameRequest(name, **self.kwargs)
+        result = Nominatim(name, **self.kwargs)
         self[lower] = result
         return result
 
     # a round bracket call is more natural!
-    def __call__(self, name: str) -> NameRequest:
+    def __call__(self, name: str) -> Nominatim:
         return self[name]
 
 
