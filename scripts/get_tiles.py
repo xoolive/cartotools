@@ -77,7 +77,10 @@ def webcrawl(bbox: type_bbox, tag: Optional[str],
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Webcrawl for WMTS tiles")
+    parser = argparse.ArgumentParser(
+        description="Webcrawl for WMTS tiles",
+        epilog="example: {} -b Occitanie -g wind_turbine  -z 13".format(__file__)
+    )
 
     parser.add_argument("-b", dest="bbox", default="Toulouse",
                         help="bounding box for the query (default: Toulouse)")

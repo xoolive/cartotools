@@ -1,10 +1,12 @@
-from cartotools.tools import image_pairs
+from cartotools.tools import bounding_box
 
 from pathlib import Path
 from typing import Iterator
 from collections import defaultdict
 import cv2
 
+# python dataset_segmentation.py Haute-Garonne tags_airport.txt dataset_hg_airport_444  -l 1000
+# python dataset_segmentation.py Toulouse tags_park.txt dataset_tls_park_444 -l 1000 -z 17+1
 
 def make_slice(total: int, size: int, step: int) -> Iterator[slice]:
     for t in range(0, total - size, step):
@@ -13,7 +15,7 @@ def make_slice(total: int, size: int, step: int) -> Iterator[slice]:
         yield slice(total - size, total)
 
 
-def dataset_segmentation(tag_file: Path, output_directory: Path,
+def dataset_detection(tag_file: Path, output_directory: Path,
                          location: str, zoom_level: int, augment: int,
                          service: str, cache_dir: Path, limit: int,
                          x_size: int, y_size: int, x_step: int, y_step: int):
@@ -24,7 +26,7 @@ def dataset_segmentation(tag_file: Path, output_directory: Path,
             idx, tag = line.strip().split(' ')
             tags[int(idx)] = tag
             
-    pairs = image_pairs(name=location, tag=tags,
+    pairs = bounding_box(name=location, tag=tags,
                         zoom_level=zoom_level, augment=augment,
                         cache_dir=cache_dir, service=service)
 
@@ -37,20 +39,19 @@ def dataset_segmentation(tag_file: Path, output_directory: Path,
     stats = defaultdict(int)
     for i, info in zip(enumeration, pairs):
         print(info[0])
-        (x, y, z), (tile, mask) = info
+        (x, y, z), (tile, boxes) = info
 
         for x_ in make_slice(tile.shape[0], x_size, x_step):
             for y_ in make_slice(tile.shape[1], y_size, y_step):
-                fname = f"{service}_{z}_{y}_{x}_{x_.start}_{y_.start}.png"
+                fname = f"{service}_{z}_{y}_{x}_{x_.start}_{y_.start}"
                 
-                tile_path = output_directory / "img" / fname
+                tile_path = output_directory / "img" / f"{fname}.png"
                 cv2.imwrite(tile_path.as_posix(), tile[x_, y_, :])
                 
-                mask_path = output_directory / "annot" / fname
-                cv2.imwrite(mask_path.as_posix(), mask[x_, y_])
-                
-                for tag in tags.keys():
-                    stats[tag] += (mask==tag).sum()
+                mask_path = output_directory / "annot" / f"{fname}.txt"
+                with mask_path.open('w') as fh:
+                    for tag, box in boxes:
+                        fh.write(f"{tag} {box[0] - x_.start} {box[1] - y_.start} {box[2] - x_.start} {box[3] - y_.start}\n")
                 
                 img_list.append(f"{tile_path.absolute().as_posix()} {mask_path.absolute().as_posix()}")
                             
@@ -66,9 +67,7 @@ if __name__ == '__main__':
     import argparse
     
     parser = argparse.ArgumentParser(
-        description="Produce segmentation dataset",
-        epilog="example: {} Toulouse tags_park.txt /data1/sat/dataset_tls_park_444 -l 1000 -z 17+1".format(__file__)
-    )
+        description="Produce detection dataset")
     
     parser.add_argument("location", help="bounding box for the data")
     
@@ -107,5 +106,5 @@ if __name__ == '__main__':
     del args['size']
     del args['step']
     
-    dataset_segmentation(**args)
+    dataset_detection(**args)
     
