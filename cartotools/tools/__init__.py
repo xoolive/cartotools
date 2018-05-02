@@ -1,2 +1,2 @@
 
-from image_pairs import image_pairs  # noqa
+from .image_pairs import image_pairs  # noqa
