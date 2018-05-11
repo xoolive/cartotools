@@ -51,7 +51,11 @@ def dataset_detection(tag_file: Path, output_directory: Path,
                 mask_path = output_directory / "annot" / f"{fname}.txt"
                 with mask_path.open('w') as fh:
                     for tag, box in boxes:
-                        fh.write(f"{tag} {box[0] - x_.start} {box[1] - y_.start} {box[2] - x_.start} {box[3] - y_.start}\n")
+                        xmin = max(0, box[0] - x_.start)
+                        ymin = max(0, box[1] - y_.start)
+                        xmax = min(x_size, box[2] - x_.start)
+                        ymax = min(y_size, box[3] - y_.start)
+                        fh.write(f"{tag} {xmin} {ymin} {xmax} {ymax}\n")
                 
                 img_list.append(f"{tile_path.absolute().as_posix()} {mask_path.absolute().as_posix()}")
                             
