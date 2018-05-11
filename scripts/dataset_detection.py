@@ -55,7 +55,10 @@ def dataset_detection(tag_file: Path, output_directory: Path,
                         ymin = max(0, box[1] - y_.start)
                         xmax = min(x_size, box[2] - x_.start)
                         ymax = min(y_size, box[3] - y_.start)
-                        fh.write(f"{tag} {xmin} {ymin} {xmax} {ymax}\n")
+                        #assert xmin < xmax, f"see {mask_path}, xmin: {box[0] - x_.start} xmax: {box[2] - x_.start}"
+                        #assert ymin < ymax, f"see {mask_path}, ymin: {box[1] - y_.start} ymax: {box[3] - y_.start}"
+                        if xmin < xmax and ymin < ymax:
+                            fh.write(f"{tag} {xmin} {ymin} {xmax} {ymax}\n")
                 
                 img_list.append(f"{tile_path.absolute().as_posix()} {mask_path.absolute().as_posix()}")
                             
