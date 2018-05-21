@@ -5,10 +5,11 @@ from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Union
 
 import requests
+from appdirs import user_cache_dir
 from shapely.geometry import LineString, Point, Polygon, base
 from shapely.ops import cascaded_union
 
-from .core import ShapelyMixin, json_request
+from .core import ShapelyMixin
 from .nominatim import Nominatim, location
 
 __all__ = ['request']
@@ -79,14 +80,14 @@ class Response(ShapelyMixin):
     @property
     def related(self) -> Dict[int, List[Dict]]:
         return {key: list(elt for elt in rel['members']
-                          if elt['type']=='relation')
+                          if elt['type'] == 'relation')
                 for key, rel in self.relations.items()}
 
 
 class OSMCache(UserDict):
 
-    def __init__(self, cachedir="./cache"):
-        self.cachedir = Path(cachedir)
+    def __init__(self):
+        self.cachedir = Path(user_cache_dir("cartotools"))
         if not self.cachedir.exists():
             self.cachedir.mkdir(parents=True)
         super().__init__()
@@ -114,7 +115,7 @@ class Overpass(object):
 
     url = 'http://www.overpass-api.de/api/interpreter'
 
-    cache: Dict['str', Any] = OSMCache()
+    cache = OSMCache()
 
     def get_query(self, format_: str, **kwargs) -> str:
 
@@ -129,7 +130,7 @@ class Overpass(object):
 
         return query_str
 
-    def json_request(self, query_type:str,
+    def json_request(self, query_type: str,
                      within: Optional[Union[str, int, Nominatim]]=None,
                      requests_extra: Dict[str, str] = dict(),
                      **kwargs) -> Response:
