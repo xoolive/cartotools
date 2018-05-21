@@ -87,7 +87,7 @@ class Response(ShapelyMixin):
 class OSMCache(UserDict):
 
     def __init__(self):
-        self.cachedir = Path(user_cache_dir("cartotools"))
+        self.cachedir = Path(user_cache_dir("cartotools")) / "json"
         if not self.cachedir.exists():
             self.cachedir.mkdir(parents=True)
         super().__init__()
