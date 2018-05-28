@@ -1,5 +1,5 @@
 from collections import OrderedDict, UserDict
-from typing import Any, Dict, Iterator, List, NamedTuple, Optional
+from typing import Dict, Iterable, Iterator, List, NamedTuple, Optional, Union
 
 from shapely.geometry import base, shape
 
@@ -7,14 +7,20 @@ from .core import ShapelyMixin, json_request
 
 __all__ = ['location']
 
-boundingbox = NamedTuple("boundingbox", [
-    ('west', float), ('east', float), ('south', float), ('north', float)
-])
+
+class BoundingBox(NamedTuple):
+    west: float
+    east: float
+    south: float
+    north: float
+
+
+LocationType = Union[int, str, Iterable, 'Nominatim']
 
 
 def nominatim_request(query: str, **kwargs):
 
-    params: Dict['str', Any] = OrderedDict()
+    params: Dict = OrderedDict()
 
     params['format'] = 'json'
     params['limit'] = 1
@@ -38,7 +44,7 @@ class Nominatim(ShapelyMixin):
 
     def __init__(self, name: str, **kwargs) -> None:
 
-        results: List[Dict[str, Any]] = nominatim_request(name, **kwargs)
+        results: List[Dict] = nominatim_request(name, **kwargs)
 
         if len(results) == 0:
             raise ValueError(f"No '{name}' found on OpenStreetMap")
@@ -47,7 +53,7 @@ class Nominatim(ShapelyMixin):
         self.display_name = self.json['display_name']
 
         # may look useless but we enjoy the named tuple in data_requests.py
-        self.bbox = boundingbox(south=float(self.json['boundingbox'][0]),
+        self.bbox = BoundingBox(south=float(self.json['boundingbox'][0]),
                                 north=float(self.json['boundingbox'][1]),
                                 west=float(self.json['boundingbox'][2]),
                                 east=float(self.json['boundingbox'][3]))

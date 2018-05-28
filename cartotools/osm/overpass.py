@@ -2,7 +2,7 @@ import hashlib
 import json
 from collections import UserDict
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, Iterable, Iterator, List, Optional, Set, Tuple
 
 import requests
 from appdirs import user_cache_dir
@@ -10,7 +10,7 @@ from shapely.geometry import LineString, Point, Polygon, base
 from shapely.ops import cascaded_union
 
 from .core import ShapelyMixin
-from .nominatim import Nominatim, location
+from .nominatim import LocationType, Nominatim, location
 
 __all__ = ['request']
 
@@ -30,7 +30,7 @@ class Response(ShapelyMixin):
                      for p in self.response['elements']
                      if p['type'] == 'way'}
 
-        # TODO improve this shit
+        # TODO improve
         self.ways = {key: (value, (Polygon(shape)
                                    if shape.is_closed else shape))
                      for (key, (value, shape)) in self.ways.items()}
@@ -41,7 +41,7 @@ class Response(ShapelyMixin):
         self.areas = {p['id']: p for p in self.response['elements']
                       if p['type'] == 'area'}
 
-        self.display_name: str = name  # TODO
+        self.display_name: str = name  # TODO improve
 
     @property
     def shape(self) -> base.BaseGeometry:
@@ -131,19 +131,23 @@ class Overpass(object):
         return query_str
 
     def json_request(self, query_type: str,
-                     within: Optional[Union[str, int, Nominatim]]=None,
+                     where: Optional[LocationType]=None,
                      requests_extra: Dict[str, str] = dict(),
                      **kwargs) -> Response:
 
-        if isinstance(within, str):
-            within = location(within)
-        if within is None:
-            within = ''
-        elif isinstance(within, int):  # osm_id
-            within = '({})'.format(within)
-        else:
+        if isinstance(where, str):
+            where = location(where)
+        if isinstance(where, int):  # osm_id
+            within = '({})'.format(where)
+        elif isinstance(where, Iterable):
+            pattern = '({:.8f},{:.8f},{:.8f},{:.8f})'
+            west, south, east, north = where  # bounds order seems more natural
+            within = pattern.format(south, west, north, east)
+        elif isinstance(where, Nominatim):
             pattern = '({south:.8f},{west:.8f},{north:.8f},{east:.8f})'
-            within = pattern.format(**within.bbox._asdict())
+            within = pattern.format(**where.bbox._asdict())
+        else:
+            within = ''
 
         filters = ''
         for key, value in kwargs.items():
@@ -173,7 +177,7 @@ class Overpass(object):
         return response
 
     # more natural than a subsequent call to json_request!
-    def __call__(self, within: Optional[Union[int, str, Nominatim]]=None,
+    def __call__(self, within: Optional[LocationType]=None,
                  **kwargs) -> Response:
         return self.json_request(within=within, **kwargs)
 
