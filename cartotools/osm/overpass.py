@@ -139,13 +139,13 @@ class Overpass(object):
             where = location(where)
         if isinstance(where, int):  # osm_id
             within = '({})'.format(where)
+        elif isinstance(where, Nominatim):
+            pattern = '({south:.8f},{west:.8f},{north:.8f},{east:.8f})'
+            within = pattern.format(**where.bbox._asdict())
         elif isinstance(where, Iterable):
             pattern = '({:.8f},{:.8f},{:.8f},{:.8f})'
             west, south, east, north = where  # bounds order seems more natural
             within = pattern.format(south, west, north, east)
-        elif isinstance(where, Nominatim):
-            pattern = '({south:.8f},{west:.8f},{north:.8f},{east:.8f})'
-            within = pattern.format(**where.bbox._asdict())
         else:
             within = ''
 
@@ -177,9 +177,9 @@ class Overpass(object):
         return response
 
     # more natural than a subsequent call to json_request!
-    def __call__(self, within: Optional[LocationType]=None,
+    def __call__(self, where: Optional[LocationType]=None,
                  **kwargs) -> Response:
-        return self.json_request(within=within, **kwargs)
+        return self.json_request(where=where, **kwargs)
 
 
 request = Overpass()
