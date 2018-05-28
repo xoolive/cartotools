@@ -1,4 +1,5 @@
-from functools import partial
+import time
+from functools import lru_cache, partial
 from typing import Tuple
 
 import requests
@@ -29,37 +30,29 @@ class ShapelyMixin(object):
         # convenient for intersections, etc.
         return self.shape.type
 
-    def __repr__(self):
-        return "{}: {}".format(__class__.__name__, self.display_name)
+    def _repr_html_(self):
+        no_wrap_div = '<div style="white-space: nowrap">{}</div>'
+        return no_wrap_div.format(self._repr_svg_())
 
     def _repr_svg_(self):
-        print(self.display_name)
-        try:
-            type(self.proj_shape)
-        except AttributeError:
-            self.proj_shape = None
-        if self.proj_shape is None:
-            try:
-                self.shape_project()
-            except:
-                return None
-        return self.proj_shape._repr_svg_()
+        return self.project_shape()._repr_svg_()
 
-    def shape_project(self, projection=None):
+    @lru_cache()
+    def project_shape(self, projection=None):
         import pyproj  # leave it as optional import
         if projection is None:
             bounds = self.bounds
             projection = pyproj.Proj(proj='aea',  # equivalent projection
                                      lat1=bounds[1], lat2=bounds[3],
                                      lon1=bounds[0], lon2=bounds[2])
-        self.proj_shape = transform(
-            partial(pyproj.transform, pyproj.Proj(init='EPSG:4326'),
-                    projection),
-            self.shape)
+        return transform(partial(
+            pyproj.transform,
+            pyproj.Proj(init='EPSG:4326'),
+            projection), self.shape)
 
     def plot(self, ax, **kwargs):
 
-        if not 'projection' in ax.__dict__:
+        if 'projection' not in ax.__dict__:
             raise ValueError("Specify a projection for your plot")
 
         if 'facecolor' not in kwargs:
@@ -105,4 +98,3 @@ def json_request(url, timeout=180, **kwargs):
                 response, response.reason, response.text))
 
     return response_json
-

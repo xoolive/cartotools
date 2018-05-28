@@ -1,5 +1,6 @@
 # todo
 
+
 def json_to_shp(json, shapefile):
     import fiona
     from shapely.geometry import LineString, mapping
@@ -26,5 +27,3 @@ def json_to_shp(json, shapefile):
                          if 'name' in item['tags'] else '',
                          "TYPE": item['tags']['aeroway']}
                      })
-
-
