@@ -12,6 +12,10 @@ from shapely.geometry import base, box
 from shapely.ops import cascaded_union, transform
 
 
+TupleArray = Tuple[np.ndarray, Tuple[np.ndarray, np.ndarray]]
+TupleFloat = Tuple[float, float, float, float]
+
+
 def compute_coords(img_tuple, bounds):
     return (sum(bounds[0] >= img_tuple[0]),
             sum(bounds[3] <= img_tuple[1]),  # reversed because y goes upwards
@@ -22,30 +26,36 @@ def compute_coords(img_tuple, bounds):
 def make_pair(coords: Tuple[int, int, int], ag,
               target: Dict[int, base.BaseGeometry],
               buffer: Dict[int, Optional[int]]=None
-              ) -> Tuple[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
+              ) -> Optional[TupleArray]:
 
     x = ag.one_image(coords)
+    if x is None:
+        return None
     return x[0], (x[1], x[2])
 
 
 def rec_make_pair(coords: Tuple[int, int, int], augment: int,
                   ag, target: Dict[int, base.BaseGeometry],
                   buffer: Dict[int, Optional[int]]
-                  ) -> Tuple[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
+                  ) -> Optional[TupleArray]:
 
     if augment == 0:
         return make_pair(coords, ag, target, buffer)
     else:
         x, y, z = coords
 
-        x0, next0 = rec_make_pair((2*x, 2*y, z+1),
-                                  augment-1, ag, target, buffer)
-        x1, next1 = rec_make_pair((2*x+1, 2*y, z+1),
-                                  augment-1, ag, target, buffer)
-        x2, next2 = rec_make_pair((2*x, 2*y+1, z+1),
-                                  augment-1, ag, target, buffer)
-        x3, next3 = rec_make_pair((2*x+1, 2*y+1, z+1),
-                                  augment-1, ag, target, buffer)
+        r0 = rec_make_pair((2*x, 2*y, z+1), augment-1, ag, target, buffer)
+        r1 = rec_make_pair((2*x+1, 2*y, z+1), augment-1, ag, target, buffer)
+        r2 = rec_make_pair((2*x, 2*y+1, z+1), augment-1, ag, target, buffer)
+        r3 = rec_make_pair((2*x+1, 2*y+1, z+1), augment-1, ag, target, buffer)
+
+        if any(r is None for r in (r0, r1, r2, r3)):
+            return None
+
+        x0, next0 = r0
+        x1, next1 = r1
+        x2, next2 = r2
+        x3, next3 = r3
 
         img = np.vstack([np.hstack([x0, x1]), np.hstack([x2, x3])])
         next_ = (np.hstack([next0[0], next3[0][1:]]),
@@ -57,10 +67,13 @@ def rec_make_pair(coords: Tuple[int, int, int], augment: int,
 def yield_bbox(coords: Tuple[int, int, int], augment: int,
                ag, target: Dict[int, base.BaseGeometry],
                buffer: Dict[int, Optional[int]]
-               )-> Tuple[np.ndarray,
-                         List[Tuple[int, Tuple[float, float, float, float]]]]:
+               )-> Optional[Tuple[np.ndarray, List[Tuple[int, TupleFloat]]]]:
 
-    img, next_ = rec_make_pair(coords, augment, ag, target, buffer)
+    r = rec_make_pair(coords, augment, ag, target, buffer)
+    if r is None:
+        return None
+
+    img, next_ = r
     bbox = box(next_[0][0], next_[1][0], next_[0][-1], next_[1][-1])
 
     output = []
@@ -97,4 +110,6 @@ def bounding_box(name: LocationType, tag: Dict[int, str],
     target = {k: transform(partial_t, r.shape) for k, r in response.items()}
 
     for coords in ag.find_images(cascaded_union(target.values()), zoom_level):
-        yield coords, yield_bbox(coords, augment, ag, target, buffer)
+        box = yield_bbox(coords, augment, ag, target, buffer)
+        if box is not None:
+            yield coords, box
