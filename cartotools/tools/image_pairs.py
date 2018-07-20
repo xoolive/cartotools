@@ -27,8 +27,7 @@ def make_pair(coords: Tuple[int, int, int], ag,
         for g in geometry:
             if buffer[idx] is not None:
                 g = g.buffer(buffer[idx])
-            flags = Mpl_Path(np.stack(g.exterior.coords)
-                             ).contains_points(points)
+            flags = Mpl_Path(np.stack(g.exterior.coords)).contains_points(points)
             mask |= flags.reshape(X.shape).astype(np.bool) 
         output[mask] = idx
     
@@ -59,7 +58,7 @@ def image_pairs(name: str, tag: Dict[int, str],
                 service: str='ArcGIS',
                ) -> Iterator[Tuple[np.ndarray, np.ndarray]]:
 
-    response = {k: request.json_request(location[name], **getattr(tags, t))
+    response = {k: request(name, **getattr(tags, t))
                 for k, t in tag.items()}
     
     buffer = {k: tags.node_width.get(v, None) for k, v in tag.items()}
@@ -73,7 +72,7 @@ def image_pairs(name: str, tag: Dict[int, str],
         pyproj.Proj(init='EPSG:4326'),
         pyproj.Proj(**ag.crs.proj4_params))
 
-    target = {k: transform(partial_t, r.geometry()) for k, r in response.items()}
+    target = {k: transform(partial_t, r.shape) for k, r in response.items()}
 
     for coords in ag.find_images(cascaded_union(target.values()), zoom_level):
         yield coords, rec_make_pair(coords, augment, ag, target, buffer)
