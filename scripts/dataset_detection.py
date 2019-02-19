@@ -1,14 +1,16 @@
-from cartotools.tools import bounding_box
-
-from pathlib import Path
-from typing import Iterator, Iterable
-from itertools import count
 from collections import defaultdict
-import cv2
+from itertools import count
+from pathlib import Path
+from typing import Iterator
+
+from cartotools.tools import bounding_box
 from tqdm import tqdm
+
+import cv2
 
 # python dataset_segmentation.py Haute-Garonne tags_airport.txt dataset_hg_airport_444  -l 1000
 # python dataset_segmentation.py Toulouse tags_park.txt dataset_tls_park_444 -l 1000 -z 17+1
+
 
 def make_slice(total: int, size: int, step: int) -> Iterator[slice]:
     for t in range(0, total - size, step):
@@ -76,6 +78,7 @@ def dataset_detection(tag_file: Path, output_directory: Path,
         for k, v in stats.items():
             fh.write(f"label {k}: total: {v}, average: {v/len(img_list)}")
 
+
 if __name__ == '__main__':
 
     import argparse
@@ -90,10 +93,10 @@ if __name__ == '__main__':
                         help="path to the tag text file")
 
     parser.add_argument("output_directory", type=Path,
-                       help="path to the output directory")
+                        help="path to the output directory")
 
     parser.add_argument("-z", dest="zoom_level", default="13+1",
-                       help="zoom level and augmentation (default: 13+1)")
+                        help="zoom level and augmentation (default: 13+1)")
 
     parser.add_argument("-t", dest="step", default="240x240",
                         help="step for the sliding window (default: 240x240)")
@@ -104,7 +107,8 @@ if __name__ == '__main__':
     parser.add_argument("-i", dest="service", default="ArcGIS",
                         help="the source of data (default: ArcGIS)")
 
-    parser.add_argument("-c", dest="cache_dir", default="/data1/sat", type=Path,
+    parser.add_argument("-c", dest="cache_dir", default="/data1/sat",
+                        type=Path,
                         help="where to store the tiles (default: /data1/sat)")
 
     parser.add_argument("-l", dest="limit", default=0, type=int,
@@ -124,4 +128,3 @@ if __name__ == '__main__':
     del args['step']
 
     dataset_detection(**args)
-
