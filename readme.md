@@ -7,7 +7,7 @@
 ```bash
 sudo apt-get install libproj-dev
 pip install Cartopy
-pip install requests pillow OSWLib appdirs
+pip install requests pillow OWSLib appdirs
 pip install git+https://github.com/xoolive/cartotools
 ```
 
