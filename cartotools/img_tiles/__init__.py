@@ -24,8 +24,9 @@ class GoogleTiles(Cache, GoogleTiles):
 
 class OSM(Cache, OSM):
     extension = '.png'
-    pass
 
-class StamenTerrain(Cache, StamenTerrain):
+class StamenTerrain(Cache, Stamen):
     extension = '.png'
-    pass
+
+    def __init__(self):
+        super().__init__("terrain")
