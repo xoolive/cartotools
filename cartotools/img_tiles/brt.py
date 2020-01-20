@@ -28,5 +28,8 @@ class BRT_Achtergrond(Cache, GoogleTiles):
 
     def _image_url(self, tile):
         x, y, z = tile
-        url = "http://geodata.nationaalgeoregister.nl/wmts/?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=%s&STYLE=default&TILEMATRIXSET=EPSG:3857&TILEMATRIX=EPSG:3857:%s&TILEROW=%s&TILECOL=%s&FORMAT=image/png8" % (self.layer, z, y, x)
+        url = (
+            "http://geodata.nationaalgeoregister.nl/wmts/?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=%s&STYLE=default&TILEMATRIXSET=EPSG:3857&TILEMATRIX=EPSG:3857:%s&TILEROW=%s&TILECOL=%s&FORMAT=image/png8"
+            % (self.layer, z, y, x)
+        )
         return url

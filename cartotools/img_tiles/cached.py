@@ -1,5 +1,4 @@
 import os
-import requests
 
 import numpy as np
 from concurrent import futures
@@ -15,13 +14,13 @@ if not os.path.isdir(global_cache_dir):
 
 class Cache(object):
 
-    extension = '.jpg'
+    extension = ".jpg"
 
     def __init__(self, *args, **kwargs):
         super(Cache, self).__init__(*args, **kwargs)
         self.params = {}
 
-        tileset_name = '{}'.format(self.__class__.__name__.lower())
+        tileset_name = "{}".format(self.__class__.__name__.lower())
         self.cache_directory = os.path.join(global_cache_dir, tileset_name)
 
     @property
@@ -32,29 +31,32 @@ class Cache(object):
     def cache_directory(self, global_cache_dir):
         global_cache_dir = os.path.expanduser(global_cache_dir)
 
-        tileset_name = '{}'.format(self.__class__.__name__.lower())
+        tileset_name = "{}".format(self.__class__.__name__.lower())
         self.cache_dir = os.path.join(global_cache_dir, tileset_name)
         if not os.path.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
 
     def get_image(self, tile):
-        tile_fname = os.path.join(self.cache_dir,
-                                  '_'.join(str(v) for v in tile) +
-                                  self.extension)
+        from .. import session
+
+        tile_fname = os.path.join(
+            self.cache_dir, "_".join(str(v) for v in tile) + self.extension
+        )
 
         if not os.path.exists(tile_fname):
-            response = requests.get(self._image_url(tile), stream=True,
-                                    **self.params)
+            response = session.get(
+                self._image_url(tile), stream=True, **self.params
+            )
 
             with open(tile_fname, "wb") as fh:
                 for chunk in response:
                     fh.write(chunk)
 
-        with open(tile_fname, 'rb') as fh:
+        with open(tile_fname, "rb") as fh:
             img = Image.open(fh)
             img = img.convert(self.desired_tile_form)
 
-        return img, self.tileextent(tile), 'lower'
+        return img, self.tileextent(tile), "lower"
 
     def one_image(self, tile):
         img, extent, origin = self.get_image(tile)

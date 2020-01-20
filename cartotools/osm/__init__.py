@@ -1,2 +1,2 @@
-from .nominatim import location
-from .overpass import request
+from .nominatim import location  # noqa: F401
+from .overpass import request  # noqa: F401

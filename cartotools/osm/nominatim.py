@@ -5,7 +5,7 @@ from shapely.geometry import base, shape
 
 from .core import ShapelyMixin, json_request
 
-__all__ = ['location']
+__all__ = ["location"]
 
 
 class BoundingBox(NamedTuple):
@@ -15,33 +15,32 @@ class BoundingBox(NamedTuple):
     north: float
 
 
-LocationType = Union[int, str, Iterable, 'Nominatim']
+LocationType = Union[int, str, Iterable, "Nominatim"]
 
 
 def nominatim_request(query: str, **kwargs):
 
     params: Dict = OrderedDict()
 
-    params['format'] = 'json'
-    params['limit'] = 1
-    params['dedupe'] = 0  # this prevents OSM from de-duping results
+    params["format"] = "json"
+    params["limit"] = 1
+    params["dedupe"] = 0  # this prevents OSM from de-duping results
     # so we're guaranteed to get precisely 'limit' number of results
-    params['polygon_geojson'] = 1
+    params["polygon_geojson"] = 1
 
     if isinstance(query, str):
-        params['q'] = query
+        params["q"] = query
     elif isinstance(query, dict):
         # add the query keys in alphabetical order so the URL is the same
         # string each time, for caching purposes
         for key in sorted(list(query.keys())):
             params[key] = query[key]
 
-    url = 'https://nominatim.openstreetmap.org/search'
+    url = "https://nominatim.openstreetmap.org/search"
     return json_request(url, timeout=30, params=params, **kwargs)
 
 
 class Nominatim(ShapelyMixin):
-
     def __init__(self, name: str, **kwargs) -> None:
 
         results: List[Dict] = nominatim_request(name, **kwargs)
@@ -50,15 +49,17 @@ class Nominatim(ShapelyMixin):
             raise ValueError(f"No '{name}' found on OpenStreetMap")
 
         self.json = results[0]
-        self.display_name = self.json['display_name']
+        self.display_name = self.json["display_name"]
 
         # may look useless but we enjoy the named tuple in data_requests.py
-        self.bbox = BoundingBox(south=float(self.json['boundingbox'][0]),
-                                north=float(self.json['boundingbox'][1]),
-                                west=float(self.json['boundingbox'][2]),
-                                east=float(self.json['boundingbox'][3]))
+        self.bbox = BoundingBox(
+            south=float(self.json["boundingbox"][0]),
+            north=float(self.json["boundingbox"][1]),
+            west=float(self.json["boundingbox"][2]),
+            east=float(self.json["boundingbox"][3]),
+        )
 
-        self.shape = shape(self.json['geojson'])
+        self.shape = shape(self.json["geojson"])
 
         self.proj_shape = None
 
@@ -68,10 +69,12 @@ class Nominatim(ShapelyMixin):
 
     @property
     def id(self) -> Optional[int]:
-        if ('osm_type' in self.json and
-                self.json['osm_type'] == 'relation' and
-                'osm_id' in self.json):
-            return int(self.json['osm_id'])
+        if (
+            "osm_type" in self.json
+            and self.json["osm_type"] == "relation"
+            and "osm_id" in self.json
+        ):
+            return int(self.json["osm_id"])
         return None
 
 

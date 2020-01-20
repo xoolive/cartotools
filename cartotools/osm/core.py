@@ -2,12 +2,10 @@ import time
 from functools import lru_cache, partial
 from typing import Tuple
 
-import requests
 from shapely.ops import transform
 
 
 class ShapelyMixin(object):
-
     @property
     def bounds(self) -> Tuple[float, float, float, float]:
         # just natural!
@@ -40,33 +38,41 @@ class ShapelyMixin(object):
     @lru_cache()
     def project_shape(self, projection=None):
         import pyproj  # leave it as optional import
+
         if projection is None:
             bounds = self.bounds
-            projection = pyproj.Proj(proj='aea',  # equivalent projection
-                                     lat1=bounds[1], lat2=bounds[3],
-                                     lon1=bounds[0], lon2=bounds[2])
-        return transform(partial(
-            pyproj.transform,
-            pyproj.Proj(init='EPSG:4326'),
-            projection), self.shape)
+            projection = pyproj.Proj(
+                proj="aea",  # equivalent projection
+                lat1=bounds[1],
+                lat2=bounds[3],
+                lon1=bounds[0],
+                lon2=bounds[2],
+            )
+        return transform(
+            partial(
+                pyproj.transform, pyproj.Proj(init="EPSG:4326"), projection
+            ),
+            self.shape,
+        )
 
     def plot(self, ax, **kwargs):
 
-        if 'projection' not in ax.__dict__:
+        if "projection" not in ax.__dict__:
             raise ValueError("Specify a projection for your plot")
 
-        if 'facecolor' not in kwargs:
-            kwargs['facecolor'] = 'None'
+        if "facecolor" not in kwargs:
+            kwargs["facecolor"] = "None"
 
-        if 'edgecolor' not in kwargs and 'color' in kwargs:
-            kwargs['edgecolor'] = kwargs['color']
-            del kwargs['color']
-        elif 'edgecolor' not in kwargs:
-            kwargs['edgecolor'] = '#aaaaaa'
+        if "edgecolor" not in kwargs and "color" in kwargs:
+            kwargs["edgecolor"] = kwargs["color"]
+            del kwargs["color"]
+        elif "edgecolor" not in kwargs:
+            kwargs["edgecolor"] = "#aaaaaa"
 
-        if 'crs' not in kwargs:
+        if "crs" not in kwargs:
             from cartopy.crs import PlateCarree
-            kwargs['crs'] = PlateCarree()
+
+            kwargs["crs"] = PlateCarree()
 
         ax.add_geometries(self, **kwargs)
 
@@ -78,8 +84,9 @@ def json_request(url, timeout=180, **kwargs):
 
     Reference: https://github.com/gboeing/osmnx/blob/master/osmnx/core.py
     """
+    from .. import session
 
-    response = requests.post(url, timeout=timeout, **kwargs)
+    response = session.post(url, timeout=timeout, **kwargs)
 
     try:
         response_json = response.json()
@@ -94,7 +101,10 @@ def json_request(url, timeout=180, **kwargs):
 
         # else, this was an unhandled status_code, throw an exception
         else:
-            raise Exception('Server returned no JSON data.\n{} {}\n{}'.format(
-                response, response.reason, response.text))
+            raise Exception(
+                "Server returned no JSON data.\n{} {}\n{}".format(
+                    response, response.reason, response.text
+                )
+            )
 
     return response_json
