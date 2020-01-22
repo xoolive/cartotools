@@ -1,9 +1,11 @@
 import hashlib
 import json
+import logging
 from collections import UserDict
 from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, Optional, Set, Tuple
 
+import pandas as pd
 from appdirs import user_cache_dir
 from shapely.geometry import LineString, Point, Polygon, base
 from shapely.ops import cascaded_union
@@ -132,6 +134,8 @@ class Overpass(object):
 
     cache = OSMCache()
 
+    cache_expiration = pd.Timedelta("3650 days")  # infinity?
+
     def get_query(self, format_: str, **kwargs) -> str:
 
         if "maxsize" not in kwargs:
@@ -198,12 +202,30 @@ class Overpass(object):
         hashcode = hashlib.md5(query_str.encode("utf-8")).hexdigest()
         response = self.cache.get(hashcode, None)
         if response is not None:
-            return self.cache[hashcode]
+            last_modification = pd.Timestamp(
+                response.response["osm3s"]["timestamp_osm_base"]
+            )
+            delta = pd.Timestamp("now", tz="utc") - last_modification
+            if delta <= self.cache_expiration:
+                logging.info(f"Footprint loaded from cache: {last_modification}")
+                return response
+            logging.warning(
+                "Expired cache files. Downloading now from OpenStreetMap."
+            )
 
-        response = session.post(url=self.url, data=query_str, **requests_extra)
-        response = Response(response.json(), hashcode)
-        self.cache[hashcode] = response
-        return response
+        try:
+            response = session.post(
+                url=self.url, data=query_str, **requests_extra
+            )
+            response = Response(response.json(), hashcode)
+            self.cache[hashcode] = response
+            return response
+        except requests.ConnectionError:
+            # in case connection is down but you still have an old cache
+            # you may want to keep it for now
+            if response is not None:
+                return response
+            raise
 
     # more natural than a subsequent call to json_request!
     def __call__(

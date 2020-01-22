@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="cartotools",
-    version="1.2",
+    version="1.2.1",
     description="Making cartopy suit my needs",
     license="MIT",
     packages=[
@@ -12,4 +12,5 @@ setup(
         "cartotools.osm",
     ],
     author="Xavier Olive",
+    install_requires=['pandas']
 )
