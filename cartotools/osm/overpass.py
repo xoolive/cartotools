@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+import requests
 from collections import UserDict
 from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, Optional, Set, Tuple
@@ -207,13 +208,18 @@ class Overpass(object):
             )
             delta = pd.Timestamp("now", tz="utc") - last_modification
             if delta <= self.cache_expiration:
-                logging.info(f"Footprint loaded from cache: {last_modification}")
+                logging.info(
+                    f"Footprint loaded from cache: {last_modification}"
+                )
                 return response
             logging.warning(
                 "Expired cache files. Downloading now from OpenStreetMap."
             )
 
         try:
+            logging.info(
+                f"Sending the following request: {query_str} to {self.url}"
+            )
             response = session.post(
                 url=self.url, data=query_str, **requests_extra
             )
