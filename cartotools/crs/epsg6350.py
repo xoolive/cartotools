@@ -2,6 +2,11 @@ from cartopy.crs import AlbersEqualArea, Globe
 
 
 class AlbersUSA(AlbersEqualArea):
+    """
+    Albers USA projection
+    http://epsg.io/6350
+    """
+
     def __init__(self):
         globe = Globe(datum="NAD83")
         super().__init__(

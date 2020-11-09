@@ -40,6 +40,7 @@ class CH1903(HotineObliqueMercator):
     """
     Swiss CH1903 / LV03 for Switzerland and Liechtenstein
     Ellipsoid is Bessel.
+    https://epsg.io/21781
     """
 
     def __init__(self):
@@ -66,6 +67,7 @@ class CH1903p(HotineObliqueMercator):
     """
     Swiss CH1903+ / LV95 for Switzerland and Liechtenstein
     Ellipsoid is Bessel.
+    http://epsg.io/2056
     """
 
     def __init__(self):

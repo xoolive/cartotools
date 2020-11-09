@@ -6,6 +6,7 @@ class Lambert93(LambertConformal):
     """
     Lambert Conformal projection for France (IGN).
     Ellipsoid is WGS84.
+    http://epsg.io/2154
     """
 
     def __init__(self):
